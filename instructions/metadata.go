@@ -2,16 +2,6 @@ package instructions
 
 import "github.com/g-thome/8086-simulator/registers"
 
-type OperandType = uint32
-
-const (
-	OperandNone OperandType = iota
-	OperandRegister
-	OperandMemory
-	OperandImmediate
-	OperandRelativeImmediate
-)
-
 type EffectiveAddressBase = uint32
 
 const (
@@ -80,6 +70,25 @@ const (
 	BITS_Z
 
 	BITS_COUNT
+)
+
+type InstructionFlag = uint32
+
+const (
+	INST_LOCK InstructionFlag = iota
+	INST_REP
+	INST_SEGMENT
+	INST_WIDE
+)
+
+type OperandType = uint8
+
+const (
+	OPERAND_NONE OperandType = iota
+	OPERAND_REGISTER
+	OPERAND_MEMORY
+	OPERAND_IMMEDIATE
+	OPERAND_RELATIVE_IMMEDIATE
 )
 
 type InstructionBits struct {

@@ -30,12 +30,14 @@ func LoadMemoryFromFile(fileName string, memory *Memory) int {
 	return numberOfBytesRead
 }
 
-func GetAbsoluteAddressOf(segmentBase uint16, segmentOffset uint16, additionalOffset uint16) uint32 {
-	return ((uint32(segmentBase) << 4) + uint32(segmentOffset+additionalOffset)&MEMORY_ACCESS_MASK)
+func GetAbsoluteAddressOf(access *SegmentedAccess, additionalOffset uint32) uint32 {
+	base := access.SegmentBase
+	offset := access.SegmentOffset
+	return ((uint32(base) << 4) + uint32(offset+additionalOffset)&MEMORY_ACCESS_MASK)
 }
 
 func ReadMemory(m *Memory, absoluteAddress uint32) byte {
-	if absoluteAddress > len(m.Bytes) {
+	if int(absoluteAddress) > len(m.Bytes) {
 		panic("Tried accessing memory out of bounds")
 	}
 

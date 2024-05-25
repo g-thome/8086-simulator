@@ -19,16 +19,57 @@ func DefaultDisAsmContext() DisasmContext {
 	return dc
 }
 
+func GetRegOperand(intelRegIndex uint32, wide uint32) instructions.InstructionOperand {
+	regTable := [8][2]registers.RegisterAccess{
+		{{registers.REGISTER_A, 0, 1}, {registers.REGISTER_A, 0, 2}},
+		{{registers.REGISTER_C, 0, 1}, {registers.REGISTER_C, 0, 2}},
+		{{registers.REGISTER_D, 0, 1}, {registers.REGISTER_D, 0, 2}},
+		{{registers.REGISTER_B, 0, 1}, {registers.REGISTER_B, 0, 2}},
+		{{registers.REGISTER_A, 1, 1}, {registers.REGISTER_SP, 0, 2}},
+		{{registers.REGISTER_C, 1, 1}, {registers.REGISTER_BP, 0, 2}},
+		{{registers.REGISTER_D, 1, 1}, {registers.REGISTER_SI, 0, 2}},
+		{{registers.REGISTER_B, 1, 1}, {registers.REGISTER_DI, 0, 2}},
+	}
+
+	return instructions.InstructionOperand{
+		Type:     instructions.OPERAND_REGISTER,
+		Register: regTable[intelRegIndex&0x7][wide],
+	}
+}
+
+func parseDataValue(m *memory.Memory, access *memory.SegmentedAccess, exists bool, wide bool, signExtended bool) uint32 {
+	var result uint32
+
+	if exists {
+		if wide {
+			d0 := memory.ReadMemory(m, memory.GetAbsoluteAddressOf(access, 0))
+			d1 := memory.ReadMemory(m, memory.GetAbsoluteAddressOf(access, 1))
+			result = uint32((d1 << 8) | d0)
+			access.SegmentOffset += 2
+		} else {
+			result = uint32(memory.ReadMemory(m, memory.GetAbsoluteAddressOf(access, 0)))
+			if signExtended {
+				result = uint32(int8(result & 0xff))
+			}
+
+			access.SegmentOffset += 1
+		}
+
+	}
+
+	return result
+}
+
 func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memory.Memory, at *memory.SegmentedAccess) (instructions.Instruction, error) {
 	result := instructions.Instruction{}
 	hasBits := 0
-	var bits uint32
+	var bits [instructions.BITS_COUNT]uint32
 	valid := true
 
-	startingAddress := memory.GetAbsoluteAddressOf(at.SegmentBase, at.SegmentOffset, 0)
+	startingAddress := memory.GetAbsoluteAddressOf(at, 0)
 
-	bitsPendingCount := 0
-	bitsPending := 0
+	var bitsPendingCount uint8
+	var bitsPending byte
 
 	for bitsIdx := 0; valid && bitsIdx < len(inst.Bits); bitsIdx++ {
 		testBits := inst.Bits[bitsIdx]
@@ -41,7 +82,7 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 		if testBits.BitCount != 0 {
 			if bitsPendingCount == 0 {
 				bitsPendingCount = 8
-				bitsPending = memory.ReadMemory(m, memory.GetAbsoluteAddressOf(at.SegmentBase, at.SegmentOffset, 0))
+				bitsPending = memory.ReadMemory(m, memory.GetAbsoluteAddressOf(at, 0))
 				at.SegmentOffset++
 			}
 
@@ -52,105 +93,109 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 			bitsPendingCount -= testBits.BitCount
 			readBits = bitsPending
 			readBits >>= bitsPendingCount
-			readBits &= ~(0xff << testBits.BitCount)
+			readBits &= ^(0xff << testBits.BitCount)
 		}
 
 		if testBits.Usage == instructions.BITS_LITERAL {
 			valid = valid && (readBits == testBits.Value)
 		} else {
-			bits[testBits.Usage] |= readBits << testBits.Shift
+			bits[testBits.Usage] |= uint32(readBits << testBits.Shift)
 			hasBits |= 1 << testBits.Usage
 		}
 	}
 
 	if valid {
-		mod = bits[instructions.BITS_MOD]
-		rm = bits[instructions.BITS_RM]
-		w = bits[instructions.W]
-		s = bits[instructions.S]
-		d = bits[instructions.D]
+		mod := bits[instructions.BITS_MOD]
+		rm := bits[instructions.BITS_RM]
+		w := bits[instructions.BITS_W]
+		s := bits[instructions.BITS_S]
+		d := bits[instructions.BITS_D]
 
-		hasDirectAccess = (mod == 0b00) && (rm == 0b110)
-		hasDisplacement = bits[instructions.BITS_HAS_DISP] || mod == 0b10 || mod == 0b01 || hasDirectAddress
-		displacementIsW = bits[instructions.BITS_DISP_ALWAYS_W] || mod == 0b10 || hasDirectAddress
-		dataIsW = bits[instructions.BITS_W_MAKES_DATA_W] && !s && w
+		hasDirectAddress := (mod == 0b00) && (rm == 0b110)
+		hasDisplacement := bits[instructions.BITS_HAS_DISP] > 0 || mod == 0b10 || mod == 0b01 || hasDirectAddress
+		displacementIsW := bits[instructions.BITS_DISP_ALWAYS_W] > 0 || mod == 0b10 || hasDirectAddress
+		dataIsW := bits[instructions.BITS_W_MAKES_DATA_W] > 0 && s == 0 && w > 0
 
-		bits[instructions.BITS_DISP] |= ParseDataValue(m, at, hasDisplacement, displacementIsW, !displacementIsW)
-		bits[instructions.BITS_DATA] |= ParseDataValue(m, at, bits[instructions.BITS_HAS_DATA], dataIsW, s)
+		bits[instructions.BITS_DISP] |= parseDataValue(m, at, hasDisplacement, displacementIsW, !displacementIsW)
+		bits[instructions.BITS_DATA] |= parseDataValue(m, at, bits[instructions.BITS_HAS_DATA] > 0, dataIsW, s > 0)
 
 		result.Op = inst.Op
 		result.Flags = ctx.AdditionalFlags
 		result.Address = startingAddress
-		result.Size = memory.GetAbsoluteAddressOf(at.SegmentBase, at.SegmentOffset, 0) - startingAddress
+		result.Size = memory.GetAbsoluteAddressOf(at, 0) - startingAddress
 
-		if w {
-			result.Flags |= INST_WIDE
+		if w > 0 {
+			result.Flags |= instructions.INST_WIDE
 		}
 
 		disp := bits[instructions.BITS_DISP]
 		displacement := int16(disp)
 
-		var regOperand *instructions.InstructionOperand
-		var modOperand *instructions.InstructionOperand
+		var regOperand instructions.InstructionOperand
+		var modOperand instructions.InstructionOperand
 
-		if d {
-			regOperand = &result.Operands[0]
-			modOperand = &result.Operands[1]
+		if d > 0 {
+			regOperand = result.Operands[0]
+			modOperand = result.Operands[1]
 		} else {
-			regOperand = &result.Operands[1]
-			modOperand = &result.Operands[0]
+			regOperand = result.Operands[1]
+			modOperand = result.Operands[0]
 		}
 
 		if hasBits&(1<<instructions.BITS_SR) == 1 {
-			regOperand.Type = OPERAND_REGISTER
+			regOperand.Type = instructions.OPERAND_REGISTER
 			regOperand.Register.Index = registers.REGISTER_ES + (bits[instructions.BITS_SR] & 0x3)
 			regOperand.Register.Count = 2
 		}
 
-		if hasBits & (1 << instructions.BITS_REG) {
+		if (hasBits & (1 << instructions.BITS_REG)) > 0 {
 			regOperand = GetRegOperand(bits[instructions.BITS_REG], w)
 		}
 
-		if hasBits & (1 << instructions.BITS_MOD) {
+		if (hasBits & (1 << instructions.BITS_MOD)) > 0 {
 			if mod == 0b11 {
-				modOperand = GetRegOperand(rm, w || bits[instructions.BITS_RM_REG_ALWAYS_W])
+				if w > 0 {
+					modOperand = GetRegOperand(rm, w)
+				} else {
+					modOperand = GetRegOperand(rm, bits[instructions.BITS_RM_REG_ALWAYS_W])
+				}
 			} else {
-				modOperand.Type = OPERAND_MEMORY
+				modOperand.Type = instructions.OPERAND_MEMORY
 				modOperand.Address.Segment = ctx.DefaultSegment
-				modOperand.Address.Displacement = displacement
+				modOperand.Address.Displacement = int32(displacement)
 
 				if (mod == 0b00) && (rm == 0b110) {
-					modOperand.Address.Base = EFFECTIVE_ADDRESS_DIRECT
+					modOperand.Address.Base = instructions.EFFECTIVE_ADDRESS_DIRECT
 				} else {
 					modOperand.Address.Base = rm + 1
 				}
 			}
 		}
 
-		lastOperand = &result.Operands[0]
+		lastOperand := &result.Operands[0]
 
-		if lastOperand.Type != nil {
+		if lastOperand.Type > 0 {
 			lastOperand = &result.Operands[1]
 		}
 
-		if bits[instructions.BITS_REL_JMP_DISP] {
-			lastOperand.Type = OPERAND_RELATIVE_IMMEDIATE
-			lastOperand.SignedImmediate = displacement + result.Size
+		if bits[instructions.BITS_REL_JMP_DISP] > 0 {
+			lastOperand.Type = instructions.OPERAND_RELATIVE_IMMEDIATE
+			lastOperand.SignedImmediate = int32(displacement) + int32(result.Size)
 		}
 
-		if bits[instructions.BITS_HAS_DATA] {
-			lastOperand.Type = OPERAND_IMMEDIATE
+		if bits[instructions.BITS_HAS_DATA] > 0 {
+			lastOperand.Type = instructions.OPERAND_IMMEDIATE
 			lastOperand.UnsignedImmediate = bits[instructions.BITS_DATA]
 		}
 
-		if hasBits & (1 << instructions.BITS_V) {
-			if bits[instructions.BITS_V] {
-				lastOperand.Type = OPERAND_REGISTER
-				lastOperand.Register.Index = instructions.REGISTER_C
+		if (hasBits & (1 << instructions.BITS_V)) > 0 {
+			if bits[instructions.BITS_V] > 0 {
+				lastOperand.Type = instructions.OPERAND_REGISTER
+				lastOperand.Register.Index = registers.REGISTER_C
 				lastOperand.Register.Offset = 0
 				lastOperand.Register.Count = 1
 			} else {
-				lastOperand.Type = OPERAND_IMMEDIATE
+				lastOperand.Type = instructions.OPERAND_IMMEDIATE
 				lastOperand.SignedImmediate = 1
 			}
 		}
