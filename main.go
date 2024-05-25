@@ -6,6 +6,7 @@ import (
 
 	"github.com/g-thome/8086-simulator/decode"
 	"github.com/g-thome/8086-simulator/memory"
+	"github.com/g-thome/8086-simulator/text"
 )
 
 func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.SegmentedAccess) {
@@ -29,10 +30,10 @@ func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.Seg
 
 		decode.UpdateContext(&ctx, instruction)
 
-		// if text.IsPrintable(instruction) {
-		// 	PrintInstruction(instruction)
-		// 	fmt.Printf("\n")
-		// }
+		if text.IsPrintable(instruction) {
+			fmt.Println(text.PrintInstruction(instruction))
+			fmt.Printf("\n")
+		}
 	}
 }
 
@@ -48,6 +49,5 @@ func main() {
 
 	bytesRead := memory.LoadMemoryFromFile(fileName, &ram)
 
-	fmt.Println(bytesRead)
-	fmt.Println(ram.Bytes[:4])
+	disAsm8086(&ram, uint32(bytesRead), memory.SegmentedAccess{0, 0})
 }
