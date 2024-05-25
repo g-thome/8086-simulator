@@ -1,0 +1,53 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/g-thome/8086-simulator/decode"
+	"github.com/g-thome/8086-simulator/memory"
+)
+
+func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.SegmentedAccess) {
+	at := disAsmStart
+
+	ctx := decode.DefaultDisAsmContext()
+
+	count := disAsmByteCount
+
+	for count > 0 {
+		instruction, err := decode.DecodeInstruction(&ctx, m, &at)
+		if err != nil {
+			panic("Unrecognized binary in instruction stream")
+		}
+
+		if count < instruction.Size {
+			panic("Instruction extends outside disassembly region")
+		}
+
+		count -= instruction.Size
+
+		decode.UpdateContext(&ctx, instruction)
+
+		// if text.IsPrintable(instruction) {
+		// 	PrintInstruction(instruction)
+		// 	fmt.Printf("\n")
+		// }
+	}
+}
+
+func main() {
+	if len(os.Args) == 1 || os.Args[1] == "" {
+		fmt.Println("USAGE: ", os.Args[0], " <name of the binary file>")
+		return
+	}
+
+	fileName := os.Args[1]
+
+	ram := memory.Memory{}
+
+	bytesRead := memory.LoadMemoryFromFile(fileName, &ram)
+
+	fmt.Println(bytesRead)
+	fmt.Println(ram.Bytes[:4])
+}
