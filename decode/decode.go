@@ -208,7 +208,7 @@ func DecodeInstruction(ctx *DisasmContext, m *memory.Memory, at *memory.Segmente
 	var instruction instructions.Instruction
 	for _, f := range instructions.InstructionFormats {
 		instruction, err := TryDecode(ctx, f, m, at)
-		if err != nil {
+		if err == nil {
 			at.SegmentOffset += instruction.Size
 			return instruction, nil
 		}
