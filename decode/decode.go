@@ -86,7 +86,7 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 				at.SegmentOffset++
 			}
 
-			if testBits.BitCount <= bitsPendingCount {
+			if testBits.BitCount > bitsPendingCount {
 				panic("instruction too large")
 			}
 
