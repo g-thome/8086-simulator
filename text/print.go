@@ -10,8 +10,31 @@ func Mnemonic(op instructions.OperationType) string {
 	return OperationTypeToMnemonic[op]
 }
 
-func RegName(reg registers.RegisterIndex) string {
-	return RegisterIndexToName[reg]
+func RegName(reg registers.RegisterAccess) string {
+	var Names = [][3]string{
+		{"", "", ""},
+		{"al", "ah", "ax"},
+		{"bl", "bh", "bx"},
+		{"cl", "ch", "cx"},
+		{"dl", "dh", "dx"},
+		{"sp", "sp", "sp"},
+		{"bp", "bp", "bp"},
+		{"si", "si", "si"},
+		{"di", "di", "di"},
+		{"es", "es", "es"},
+		{"cs", "cs", "cs"},
+		{"ss", "ss", "ss"},
+		{"ds", "ds", "ds"},
+		{"ip", "ip", "ip"},
+		{"flags", "flags", "flags"},
+	}
+
+	result := Names[reg.Index][2]
+	if reg.Count != 2 {
+		result = Names[reg.Index][reg.Offset&1]
+	}
+
+	return result
 }
 
 func EffectiveAddressBase(address instructions.EffectiveAddressBase) string {
@@ -51,7 +74,7 @@ func PrintInstruction(inst instructions.Instruction) string {
 		}
 	}
 
-	result += Mnemonic(inst.Op) + mnemonicSuffix
+	result += Mnemonic(inst.Op) + mnemonicSuffix + " "
 
 	separator := ""
 
@@ -64,7 +87,7 @@ func PrintInstruction(inst instructions.Instruction) string {
 			case instructions.OPERAND_NONE:
 				break
 			case instructions.OPERAND_REGISTER:
-				result += RegName(o.Register.Index)
+				result += RegName(o.Register)
 			case instructions.OPERAND_MEMORY:
 				if inst.Operands[0].Type != instructions.OPERAND_REGISTER {
 					if w > 0 {
@@ -75,7 +98,7 @@ func PrintInstruction(inst instructions.Instruction) string {
 				}
 
 				if (flags & instructions.INST_SEGMENT) > 0 {
-					result += RegName(o.Address.Segment)
+					result += RegName(registers.RegisterAccess{o.Address.Segment, 0, 2})
 				}
 
 				result += "[" + EffectiveAddressBase(o.Address.Base)

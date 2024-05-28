@@ -49,14 +49,12 @@ func ImpS(val uint8) InstructionBits {
 	return InstructionBits{BITS_S, 0, 0, val}
 }
 
-var encodings []InstructionEncoding
-
 func b(bits string) InstructionBits {
-	i, err := strconv.Atoi(bits)
+	i, err := strconv.ParseUint(bits, 2, 8)
 	if err != nil {
 		log.Fatalf("Malformed instructions table. %s is not a valid integer", bits)
 	}
-	return InstructionBits{BITS_LITERAL, uint8(len(bits)), uint8(i), 0}
+	return InstructionBits{BITS_LITERAL, uint8(len(bits)), 0, uint8(i)}
 }
 
 func flags(f InstructionBitsUsage) InstructionBits {

@@ -1,6 +1,10 @@
 package instructions
 
-import "github.com/g-thome/8086-simulator/registers"
+import (
+	"fmt"
+	"github.com/g-thome/8086-simulator/registers"
+	"strconv"
+)
 
 type EffectiveAddressBase = uint32
 
@@ -75,10 +79,10 @@ const (
 type InstructionFlag = uint32
 
 const (
-	INST_LOCK InstructionFlag = iota
-	INST_REP
-	INST_SEGMENT
-	INST_WIDE
+	INST_LOCK    InstructionFlag = 1 << 0
+	INST_REP                     = 1 << 1
+	INST_SEGMENT                 = 1 << 2
+	INST_WIDE                    = 1 << 3
 )
 
 type OperandType = uint8
@@ -98,7 +102,13 @@ type InstructionBits struct {
 	Value    uint8
 }
 
-type InstructionEncoding struct {
-	Op   OperationType
-	Bits [16]InstructionBits
+// for debugging purposes
+func (f *InstructionFormat) PrintBits() {
+	result := ""
+
+	for _, bits := range f.Bits {
+		result += strconv.FormatInt(int64(bits.Value), 2)
+	}
+
+	fmt.Printf("%s\n", result)
 }

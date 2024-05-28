@@ -19,7 +19,7 @@ func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.Seg
 	for count > 0 {
 		instruction, err := decode.DecodeInstruction(&ctx, m, &at)
 		if err != nil {
-			panic("Unrecognized binary in instruction stream")
+			panic(err)
 		}
 
 		if count < instruction.Size {
@@ -32,7 +32,6 @@ func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.Seg
 
 		if text.IsPrintable(instruction) {
 			fmt.Println(text.PrintInstruction(instruction))
-			fmt.Printf("\n")
 		}
 	}
 }
