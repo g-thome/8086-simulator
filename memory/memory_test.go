@@ -21,3 +21,16 @@ func TestLoadMemoryFromFile(t *testing.T) {
 		t.Fatalf(`bytes mismatch. Expected %v got %v`, expectedBytes, actualBytes)
 	}
 }
+
+func TestReadMemory(t *testing.T) {
+	m := Memory{}
+
+	var expected byte = 0b00010001
+	m.Bytes[4] = expected
+
+	received := ReadMemory(&m, 4)
+
+	if expected != received {
+		t.Fatalf(`bytes mismatch. Expected %v got %v`, expected, received)
+	}
+}
