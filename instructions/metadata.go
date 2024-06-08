@@ -39,7 +39,7 @@ type InstructionOperand struct {
 
 type Instruction struct {
 	Address  uint32
-	Size     uint32
+	Size     uint32 // amount of bytes
 	Op       OperationType
 	Flags    uint32
 	Operands [2]InstructionOperand
