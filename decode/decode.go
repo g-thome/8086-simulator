@@ -60,12 +60,12 @@ func parseDataValue(m *memory.Memory, access *memory.SegmentedAccess, exists boo
 	return result
 }
 
-func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memory.Memory, at *memory.SegmentedAccess) (instructions.Instruction, error) {
+func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memory.Memory, at memory.SegmentedAccess) (instructions.Instruction, error) {
 	result := instructions.Instruction{}
 	hasBits := 0
 	var bits [instructions.BITS_COUNT]uint32
 
-	startingAddress := memory.GetAbsoluteAddressOf(at, 0)
+	startingAddress := memory.GetAbsoluteAddressOf(&at, 0)
 
 	var bitsPendingCount uint8
 	var bitsPending byte
@@ -81,7 +81,7 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 		if testBits.BitCount != 0 {
 			if bitsPendingCount == 0 {
 				bitsPendingCount = 8
-				bitsPending = memory.ReadMemory(m, memory.GetAbsoluteAddressOf(at, 0))
+				bitsPending = memory.ReadMemory(m, memory.GetAbsoluteAddressOf(&at, 0))
 				at.SegmentOffset++
 			}
 
@@ -116,13 +116,13 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 	displacementIsW := bits[instructions.BITS_DISP_ALWAYS_W] > 0 || mod == 0b10 || hasDirectAddress
 	dataIsW := bits[instructions.BITS_W_MAKES_DATA_W] > 0 && s == 0 && w > 0
 
-	bits[instructions.BITS_DISP] |= parseDataValue(m, at, hasDisplacement, displacementIsW, !displacementIsW)
-	bits[instructions.BITS_DATA] |= parseDataValue(m, at, bits[instructions.BITS_HAS_DATA] > 0, dataIsW, s > 0)
+	bits[instructions.BITS_DISP] |= parseDataValue(m, &at, hasDisplacement, displacementIsW, !displacementIsW)
+	bits[instructions.BITS_DATA] |= parseDataValue(m, &at, bits[instructions.BITS_HAS_DATA] > 0, dataIsW, s > 0)
 
 	result.Op = inst.Op
 	result.Flags = ctx.AdditionalFlags
 	result.Address = startingAddress
-	result.Size = memory.GetAbsoluteAddressOf(at, 0) - startingAddress
+	result.Size = memory.GetAbsoluteAddressOf(&at, 0) - startingAddress
 
 	if w > 0 {
 		result.Flags |= instructions.INST_WIDE
@@ -206,7 +206,7 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 func DecodeInstruction(ctx *DisasmContext, m *memory.Memory, at *memory.SegmentedAccess) (instructions.Instruction, error) {
 	var instruction instructions.Instruction
 	for _, f := range instructions.InstructionFormats {
-		instruction, err := TryDecode(ctx, f, m, at)
+		instruction, err := TryDecode(ctx, f, m, *at)
 		if err == nil {
 			at.SegmentOffset += instruction.Size
 			return instruction, nil
