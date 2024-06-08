@@ -8,7 +8,7 @@ import (
 func TestLoadMemoryFromFile(t *testing.T) {
 	m := Memory{}
 
-	bytesRead := LoadMemoryFromFile("../fixtures/single_register_mov", &m)
+	bytesRead := LoadMemoryFromFile("../fixtures/bin/mov_cx_bx", &m)
 
 	expectedBytesRead := 2
 	if bytesRead != expectedBytesRead {
