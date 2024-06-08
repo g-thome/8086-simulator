@@ -212,15 +212,15 @@ func TestDecodeMovAccMemory(t *testing.T) {
 	}
 }
 
-func TestDecodeMovAccMemory(t *testing.T) {
+func TestDecodeMovMemoryReg(t *testing.T) {
 	at := memory.SegmentedAccess{0, 0}
 	ctx := DefaultDisAsmContext()
 	m := memory.Memory{}
-	memory.LoadMemoryFromFile("../fixtures/bin/mov_ax_[16]", &m)
+	memory.LoadMemoryFromFile("../fixtures/bin/mov_cx_[104]", &m)
 
 	expected := instructions.Instruction{
 		Address: 0,
-		Size:    3,
+		Size:    4,
 		Op:      instructions.OpMov,
 		Flags:   8,
 		Operands: [2]instructions.InstructionOperand{
@@ -232,7 +232,7 @@ func TestDecodeMovAccMemory(t *testing.T) {
 					Displacement: 0,
 				},
 				Register: registers.RegisterAccess{
-					Index:  registers.REGISTER_A,
+					Index:  registers.REGISTER_C,
 					Offset: 0,
 					Count:  2,
 				},
@@ -244,7 +244,7 @@ func TestDecodeMovAccMemory(t *testing.T) {
 				Address: instructions.EffectiveAddressExpression{
 					Segment:      12,
 					Base:         instructions.EFFECTIVE_ADDRESS_DIRECT,
-					Displacement: 16,
+					Displacement: 104,
 				},
 				Register: registers.RegisterAccess{
 					Index:  registers.REGISTER_NONE,
