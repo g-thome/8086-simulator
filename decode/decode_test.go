@@ -170,6 +170,60 @@ func TestDecodeMovRegSignedImmediate(t *testing.T) {
 	}
 }
 
+func TestDecodeMovRegHighBitsSignedImmediate(t *testing.T) {
+	at := memory.SegmentedAccess{0, 0}
+	ctx := DefaultDisAsmContext()
+	m := memory.Memory{}
+	memory.LoadMemoryFromFile("../fixtures/bin/mov_ch_-12", &m)
+
+	expected := instructions.Instruction{
+		Address: 0,
+		Size:    2,
+		Op:      instructions.OpMov,
+		Flags:   0,
+		Operands: [2]instructions.InstructionOperand{
+			{
+				Type: instructions.OPERAND_REGISTER,
+				Address: instructions.EffectiveAddressExpression{
+					Segment:      0,
+					Base:         instructions.EFFECTIVE_ADDRESS_DIRECT,
+					Displacement: 0,
+				},
+				Register: registers.RegisterAccess{
+					Index:  registers.REGISTER_C,
+					Offset: 1,
+					Count:  1,
+				},
+				Immediate: instructions.Immediate{},
+			},
+			{
+				Type: instructions.OPERAND_IMMEDIATE,
+				Address: instructions.EffectiveAddressExpression{
+					Segment:      0,
+					Base:         instructions.EFFECTIVE_ADDRESS_DIRECT,
+					Displacement: 0,
+				},
+				Register: registers.RegisterAccess{
+					Index:  registers.REGISTER_NONE,
+					Offset: 0,
+					Count:  0,
+				},
+				Immediate: instructions.Immediate{-12, false},
+			},
+		},
+	}
+
+	received, err := DecodeInstruction(&ctx, &m, &at)
+
+	if err != nil {
+		t.Fatalf(`Error decoding instruction %v`, err)
+	}
+
+	if !reflect.DeepEqual(received, expected) {
+		t.Fatalf("Expected \n%+v, \ngot \n%+v", expected, received)
+	}
+}
+
 func TestDecodeMovAccMemory(t *testing.T) {
 	at := memory.SegmentedAccess{0, 0}
 	ctx := DefaultDisAsmContext()
