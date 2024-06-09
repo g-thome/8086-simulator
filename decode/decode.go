@@ -59,7 +59,7 @@ func parseDataValue(m *memory.Memory, access *memory.SegmentedAccess, exists boo
 		if wide {
 			d0 := memory.ReadMemory(m, memory.GetAbsoluteAddressOf(access, 0))
 			d1 := memory.ReadMemory(m, memory.GetAbsoluteAddressOf(access, 1))
-			result = uint32((d1 << 8) | d0)
+			result = (uint32(d1) << 8) | uint32(d0)
 			access.SegmentOffset += 2
 		} else {
 			result = uint32(memory.ReadMemory(m, memory.GetAbsoluteAddressOf(access, 0)))
