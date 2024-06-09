@@ -547,3 +547,57 @@ func TestDecodeMovFromAddressCalculationWithLargeDisplacementToReg(t *testing.T)
 		t.Fatalf("Expected \n%+v, \ngot \n%+v", expected, received)
 	}
 }
+
+func TestDecodeMovFromRegToAddressCalculation(t *testing.T) {
+	at := memory.SegmentedAccess{0, 0}
+	ctx := DefaultDisAsmContext()
+	m := memory.Memory{}
+	memory.LoadMemoryFromFile("../fixtures/bin/mov_[bp + si]_cl", &m)
+
+	expected := instructions.Instruction{
+		Address: 0,
+		Size:    2,
+		Op:      instructions.OpMov,
+		Flags:   0,
+		Operands: [2]instructions.InstructionOperand{
+			{
+				Type: instructions.OPERAND_MEMORY,
+				Address: instructions.EffectiveAddressExpression{
+					Segment:      12,
+					Base:         instructions.EFFECTIVE_ADDRESS_BP_SI,
+					Displacement: 0,
+				},
+				Register: registers.RegisterAccess{
+					Index:  registers.REGISTER_NONE,
+					Offset: 0,
+					Count:  0,
+				},
+				Immediate: instructions.Immediate{},
+			},
+			{
+				Type: instructions.OPERAND_REGISTER,
+				Address: instructions.EffectiveAddressExpression{
+					Segment:      0,
+					Base:         instructions.EFFECTIVE_ADDRESS_DIRECT,
+					Displacement: 0,
+				},
+				Register: registers.RegisterAccess{
+					Index:  registers.REGISTER_C,
+					Offset: 0,
+					Count:  1,
+				},
+				Immediate: instructions.Immediate{},
+			},
+		},
+	}
+
+	received, err := DecodeInstruction(&ctx, &m, &at)
+
+	if err != nil {
+		t.Fatalf(`Error decoding instruction %v`, err)
+	}
+
+	if !reflect.DeepEqual(received, expected) {
+		t.Fatalf("Expected \n%+v, \ngot \n%+v", expected, received)
+	}
+}
