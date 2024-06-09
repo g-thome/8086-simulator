@@ -22,7 +22,17 @@ func (s *Simulation) Run(instruction instructions.Instruction) {
 	source := instruction.Operands[1]
 	destination := instruction.Operands[0]
 	reg := &s.Registers[destination.Register.Index]
-	reg.Value = uint32(source.Immediate.Value)
+
+	if source.Type == instructions.OPERAND_IMMEDIATE {
+		reg.Value = uint32(source.Immediate.Value)
+		return
+	}
+
+	if source.Type == instructions.OPERAND_REGISTER {
+		sourceReg := &s.Registers[source.Register.Index]
+		reg.Value = sourceReg.Value
+		return
+	}
 }
 
 func (s *Simulation) PrintRegisters() {
