@@ -108,9 +108,11 @@ func PrintInstruction(inst instructions.Instruction) string {
 
 				result += "]"
 			case instructions.OPERAND_IMMEDIATE:
-				result += strconv.Itoa(int(o.SignedImmediate))
-			case instructions.OPERAND_RELATIVE_IMMEDIATE:
-				result += strconv.Itoa(int(o.UnsignedImmediate))
+				if o.Immediate.Relative {
+					result += strconv.Itoa(int(o.Immediate.Value + int32(inst.Size)))
+				} else {
+					result += strconv.Itoa(int(o.Immediate.Value))
+				}
 			}
 		}
 	}

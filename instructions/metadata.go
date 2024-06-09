@@ -6,6 +6,11 @@ import (
 	"strconv"
 )
 
+type Immediate struct {
+	Value    int32
+	Relative bool
+}
+
 type EffectiveAddressBase = uint32
 
 const (
@@ -30,11 +35,10 @@ type EffectiveAddressExpression struct {
 }
 
 type InstructionOperand struct {
-	Type              OperandType
-	Address           EffectiveAddressExpression
-	Register          registers.RegisterAccess
-	UnsignedImmediate uint32
-	SignedImmediate   int32
+	Type      OperandType
+	Address   EffectiveAddressExpression
+	Register  registers.RegisterAccess
+	Immediate Immediate
 }
 
 type Instruction struct {

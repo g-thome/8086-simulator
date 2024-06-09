@@ -5,6 +5,7 @@ import (
 	"github.com/g-thome/8086-simulator/instructions"
 	"github.com/g-thome/8086-simulator/memory"
 	"github.com/g-thome/8086-simulator/registers"
+	"math/bits"
 )
 
 type DisasmContext struct {
@@ -17,6 +18,20 @@ func DefaultDisAsmContext() DisasmContext {
 	dc.DefaultSegment = registers.REGISTER_DS
 
 	return dc
+}
+
+func toSignedInt(number uint32) int32 {
+	bitCount := bits.Len(uint(number))
+
+	if bitCount <= 8 {
+		return int32(int8(number))
+	} else if bitCount <= 16 {
+		return int32(int16(number))
+	} else if bitCount <= 32 {
+		return int32(int16(number))
+	} else {
+		return int32(number)
+	}
 }
 
 func GetRegOperand(intelRegIndex uint32, wide uint32) instructions.InstructionOperand {
@@ -180,12 +195,12 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 
 	if bits[instructions.BITS_REL_JMP_DISP] > 0 {
 		lastOperand.Type = instructions.OPERAND_RELATIVE_IMMEDIATE
-		lastOperand.SignedImmediate = int32(displacement) + int32(result.Size)
+		lastOperand.Immediate = instructions.Immediate{int32(displacement) + int32(result.Size), true}
 	}
 
 	if bits[instructions.BITS_HAS_DATA] > 0 {
 		lastOperand.Type = instructions.OPERAND_IMMEDIATE
-		lastOperand.UnsignedImmediate = bits[instructions.BITS_DATA]
+		lastOperand.Immediate = instructions.Immediate{toSignedInt(bits[instructions.BITS_DATA]), false}
 	}
 
 	if (hasBits & (1 << instructions.BITS_V)) > 0 {
@@ -196,7 +211,7 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 			lastOperand.Register.Count = 1
 		} else {
 			lastOperand.Type = instructions.OPERAND_IMMEDIATE
-			lastOperand.SignedImmediate = 1
+			lastOperand.Immediate = instructions.Immediate{toSignedInt(bits[instructions.BITS_DATA]), false}
 		}
 	}
 
