@@ -159,7 +159,7 @@ func TryDecode(ctx *DisasmContext, inst instructions.InstructionFormat, m *memor
 
 	if hasBits&(1<<instructions.BITS_SR) == 1 {
 		regOperand.Type = instructions.OPERAND_REGISTER
-		regOperand.Register.Index = registers.REGISTER_ES + (bits[instructions.BITS_SR] & 0x3)
+		regOperand.Register.Index = registers.RegisterIndex(uint32(registers.REGISTER_ES) + (bits[instructions.BITS_SR] & 0x3))
 		regOperand.Register.Count = 2
 	}
 

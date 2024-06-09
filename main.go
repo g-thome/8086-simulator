@@ -6,10 +6,11 @@ import (
 
 	"github.com/g-thome/8086-simulator/decode"
 	"github.com/g-thome/8086-simulator/memory"
+	"github.com/g-thome/8086-simulator/simulator"
 	"github.com/g-thome/8086-simulator/text"
 )
 
-func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.SegmentedAccess) {
+func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.SegmentedAccess, s *simulator.Simulation) {
 	at := disAsmStart
 
 	ctx := decode.DefaultDisAsmContext()
@@ -29,6 +30,7 @@ func disAsm8086(m *memory.Memory, disAsmByteCount uint32, disAsmStart memory.Seg
 		count -= instruction.Size
 
 		decode.UpdateContext(&ctx, instruction)
+		s.Run(instruction)
 
 		if text.IsPrintable(instruction) {
 			fmt.Println(text.PrintInstruction(instruction))
@@ -48,5 +50,8 @@ func main() {
 
 	bytesRead := memory.LoadMemoryFromFile(fileName, &ram)
 
-	disAsm8086(&ram, uint32(bytesRead), memory.SegmentedAccess{0, 0})
+	simulation := simulator.NewSimulation()
+
+	disAsm8086(&ram, uint32(bytesRead), memory.SegmentedAccess{0, 0}, &simulation)
+	simulation.PrintRegisters()
 }

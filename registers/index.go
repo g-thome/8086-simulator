@@ -1,6 +1,6 @@
 package registers
 
-type RegisterIndex = uint32
+type RegisterIndex uint32
 
 const (
 	REGISTER_NONE RegisterIndex = iota
@@ -20,6 +20,41 @@ const (
 	REGISTER_FLAGS
 	REGISTER_COUNT
 )
+
+func (r RegisterIndex) String() string {
+	switch r {
+	case REGISTER_A:
+		return "A"
+	case REGISTER_B:
+		return "B"
+	case REGISTER_C:
+		return "C"
+	case REGISTER_D:
+		return "D"
+	case REGISTER_SP:
+		return "SP"
+	case REGISTER_BP:
+		return "BP"
+	case REGISTER_SI:
+		return "SI"
+	case REGISTER_DI:
+		return "DI"
+	case REGISTER_ES:
+		return "ES"
+	case REGISTER_CS:
+		return "CS"
+	case REGISTER_SS:
+		return "SS"
+	case REGISTER_DS:
+		return "DS"
+	case REGISTER_IP:
+		return "IP"
+	case REGISTER_FLAGS:
+		return "FLAGS"
+	default:
+		return ""
+	}
+}
 
 type RegisterAccess struct {
 	Index  RegisterIndex
