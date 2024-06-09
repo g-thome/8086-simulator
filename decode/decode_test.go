@@ -709,3 +709,57 @@ func TestAddAddressCalculationToReg(t *testing.T) {
 		t.Fatalf("Expected \n%+v, \ngot \n%+v", expected, received)
 	}
 }
+
+func TestAddImmediateToReg(t *testing.T) {
+	at := memory.SegmentedAccess{0, 0}
+	ctx := DefaultDisAsmContext()
+	m := memory.Memory{}
+	memory.LoadMemoryFromFile("../fixtures/bin/add_si_2", &m)
+
+	expected := instructions.Instruction{
+		Address: 0,
+		Size:    3,
+		Op:      instructions.OpAdd,
+		Flags:   8,
+		Operands: [2]instructions.InstructionOperand{
+			{
+				Type: instructions.OPERAND_REGISTER,
+				Address: instructions.EffectiveAddressExpression{
+					Segment:      0,
+					Base:         instructions.EFFECTIVE_ADDRESS_DIRECT,
+					Displacement: 0,
+				},
+				Register: registers.RegisterAccess{
+					Index:  registers.REGISTER_SI,
+					Offset: 0,
+					Count:  2,
+				},
+				Immediate: instructions.Immediate{},
+			},
+			{
+				Type: instructions.OPERAND_IMMEDIATE,
+				Address: instructions.EffectiveAddressExpression{
+					Segment:      0,
+					Base:         instructions.EFFECTIVE_ADDRESS_DIRECT,
+					Displacement: 0,
+				},
+				Register: registers.RegisterAccess{
+					Index:  registers.REGISTER_NONE,
+					Offset: 0,
+					Count:  0,
+				},
+				Immediate: instructions.Immediate{2, false},
+			},
+		},
+	}
+
+	received, err := DecodeInstruction(&ctx, &m, &at)
+
+	if err != nil {
+		t.Fatalf(`Error decoding instruction %v`, err)
+	}
+
+	if !reflect.DeepEqual(received, expected) {
+		t.Fatalf("Expected \n%+v, \ngot \n%+v", expected, received)
+	}
+}
